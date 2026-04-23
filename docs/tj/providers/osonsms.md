@@ -4,7 +4,7 @@
 
 [Бозгашт ба README](../../../README.md)
 
-Ҳуҷҷати кӯтоҳи адаптери `osonsms` барои `sq-dev/sms-gateway`.
+Ҳуҷҷати кӯтоҳи адаптери `osonsms` барои `sqdev/sms-gateway`.
 
 ## Хулоса
 

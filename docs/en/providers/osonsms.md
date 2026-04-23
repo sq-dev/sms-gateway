@@ -4,7 +4,7 @@
 
 [Back to README](../../../README.en.md)
 
-Short reference for the `osonsms` adapter in `sq-dev/sms-gateway`.
+Short reference for the `osonsms` adapter in `sqdev/sms-gateway`.
 
 ## Summary
 

@@ -4,7 +4,7 @@
 
 [Назад к README](../../../README.ru.md)
 
-Краткая документация по адаптеру `osonsms` для `sq-dev/sms-gateway`.
+Краткая документация по адаптеру `osonsms` для `sqdev/sms-gateway`.
 
 ## Кратко
 

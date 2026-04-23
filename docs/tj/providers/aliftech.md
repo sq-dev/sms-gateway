@@ -4,7 +4,7 @@
 
 [Бозгашт ба README](../../../README.md)
 
-Ҳуҷҷати кӯтоҳи адаптери `aliftech` барои `sq-dev/sms-gateway`.
+Ҳуҷҷати кӯтоҳи адаптери `aliftech` барои `sqdev/sms-gateway`.
 
 ## Хулоса
 

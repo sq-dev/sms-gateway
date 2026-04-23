@@ -10,7 +10,7 @@ use Illuminate\Support\ServiceProvider;
 use SmsGateway\Sender;
 
 /**
- * Laravel service provider for `sq-dev/sms-gateway`.
+ * Laravel service provider for `sqdev/sms-gateway`.
  *
  * Registers the {@see SmsGatewayManager} as a singleton, exposes the default
  * configured {@see Sender} to the container for constructor injection, and

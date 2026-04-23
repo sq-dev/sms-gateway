@@ -4,7 +4,7 @@
 
 [Назад к README](../../../README.ru.md)
 
-Краткая документация по адаптеру `payom` для `sq-dev/sms-gateway`.
+Краткая документация по адаптеру `payom` для `sqdev/sms-gateway`.
 
 ## Кратко
 
