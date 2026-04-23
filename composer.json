@@ -20,7 +20,7 @@
             "email": "sqmailer@gmail.com"
         }
     ],
-    "minimum-stability": "beta",
+    "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
         "php": "^8.1",
