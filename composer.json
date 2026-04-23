@@ -1,0 +1,48 @@
+{
+    "name": "sqdev/sms-gateway",
+    "description": "Provider-agnostic SMS gateway abstractions with a unified API for multiple SMS providers.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["sms", "gateway", "sms-gateway", "provider", "abstraction"],
+    "autoload": {
+        "psr-4": {
+            "SmsGateway\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SmsGateway\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Asrorov Saidazam",
+            "email": "sqmailer@gmail.com"
+        }
+    ],
+    "minimum-stability": "beta",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.1",
+        "php-http/discovery": "^1.19",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.0",
+        "psr/http-message": "^1.0 || ^2.0"
+    },
+    "require-dev": {
+        "nyholm/psr7": "^1.8",
+        "phpunit/phpunit": "^10.5",
+        "symfony/http-client": "^6.4 || ^7.0"
+    },
+    "suggest": {
+        "guzzlehttp/guzzle": "Popular PSR-18 HTTP client; installed once, auto-detected by discovery",
+        "symfony/http-client": "Lightweight PSR-18 HTTP client with auto-detection support",
+        "php-http/curl-client": "Minimal PSR-18 client based on cURL when you don't want a full-featured client"
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
