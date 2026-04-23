@@ -1,8 +1,8 @@
-# sqdev/sms-gateway
+# sq-dev/sms-gateway
 
 [Тоҷикӣ](README.md) | [Русский](README.ru.md) | [English](README.en.md)
 
-Китобхонаи `sqdev/sms-gateway` барои PHP интерфейси ягонаи фиристодани SMS медиҳад. Шумо метавонед як API-и устуворро барои чанд провайдер истифода баред, натиҷаҳои фиристоданро дар шакли ягона гиред ва дар Laravel ҳамон шартномаҳоро тавассути facade ва manager истифода баред.
+Китобхонаи `sq-dev/sms-gateway` барои PHP интерфейси ягонаи фиристодани SMS медиҳад. Шумо метавонед як API-и устуворро барои чанд провайдер истифода баред, натиҷаҳои фиристоданро дар шакли ягона гиред ва дар Laravel ҳамон шартномаҳоро тавассути facade ва manager истифода баред.
 
 ## Чӣ медиҳад
 
@@ -15,7 +15,7 @@
 ## Насб
 
 ```bash
-composer require sqdev/sms-gateway
+composer require sq-dev/sms-gateway
 ```
 
 Китобхона ба PSR-18 HTTP client такя мекунад. Агар дар лоиҳа аллакай Guzzle, Symfony HTTP Client ё ягон PSR-18 client мавҷуд бошад, `php-http/discovery` онро худкор пайдо мекунад. Агар надошта бошед, якеашро насб кунед:

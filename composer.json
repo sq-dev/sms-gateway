@@ -1,5 +1,5 @@
 {
-    "name": "sqdev/sms-gateway",
+    "name": "sq-dev/sms-gateway",
     "description": "Provider-agnostic SMS gateway abstractions with a unified API for multiple SMS providers.",
     "type": "library",
     "license": "MIT",

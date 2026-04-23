@@ -7,7 +7,7 @@ declare(strict_types=1);
 | SMS Gateway configuration
 |--------------------------------------------------------------------------
 |
-| This configuration file controls how the `sqdev/sms-gateway` package
+| This configuration file controls how the `sq-dev/sms-gateway` package
 | resolves SMS providers inside a Laravel application. The `default`
 | connection is used whenever `SmsGateway::send(...)` is called without a
 | connection name. Named connections can be targeted via

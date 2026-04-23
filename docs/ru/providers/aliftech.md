@@ -4,7 +4,7 @@
 
 [Назад к README](../../../README.ru.md)
 
-Краткая документация по адаптеру `aliftech` для `sqdev/sms-gateway`.
+Краткая документация по адаптеру `aliftech` для `sq-dev/sms-gateway`.
 
 ## Кратко
 

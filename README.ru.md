@@ -1,8 +1,8 @@
-# sqdev/sms-gateway
+# sq-dev/sms-gateway
 
 [Тоҷикӣ](README.md) | [Русский](README.ru.md) | [English](README.en.md)
 
-`sqdev/sms-gateway` — это PHP-библиотека с единым API для отправки SMS через разных провайдеров. Она дает стабильный слой абстракции для отправки, нормализованные результаты и статусы доставки, а в Laravel добавляет готовые facade, manager и config.
+`sq-dev/sms-gateway` — это PHP-библиотека с единым API для отправки SMS через разных провайдеров. Она дает стабильный слой абстракции для отправки, нормализованные результаты и статусы доставки, а в Laravel добавляет готовые facade, manager и config.
 
 ## Что дает библиотека
 
@@ -15,7 +15,7 @@
 ## Установка
 
 ```bash
-composer require sqdev/sms-gateway
+composer require sq-dev/sms-gateway
 ```
 
 Библиотека опирается на PSR-18 HTTP client. Если в проекте уже есть Guzzle, Symfony HTTP Client или любой другой PSR-18 клиент, `php-http/discovery` найдет его автоматически. Если клиента нет, установите один из них:

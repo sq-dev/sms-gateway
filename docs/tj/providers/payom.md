@@ -4,7 +4,7 @@
 
 [Бозгашт ба README](../../../README.md)
 
-Ҳуҷҷати кӯтоҳи адаптери `payom` барои `sqdev/sms-gateway`.
+Ҳуҷҷати кӯтоҳи адаптери `payom` барои `sq-dev/sms-gateway`.
 
 ## Хулоса
 
