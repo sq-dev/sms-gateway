@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmsGateway\Providers\SmsGate;
+namespace SmsGateway\Providers\Aliftech;
 
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -27,33 +27,33 @@ use SmsGateway\Exception\ProviderException;
 use Throwable;
 
 /**
- * SMSGate (Alif Tech) gateway adapter.
+ * Aliftech gateway adapter.
  *
- * Implements the composite {@see SmsProviderInterface} because the SMSGate
+ * Implements the composite {@see SmsProviderInterface} because the Aliftech
  * HTTP API exposes both `POST /api/v1/sms` and `GET /api/v1/sms/{id}` for
  * sending and status tracking.
  *
  * ## Usage
  *
  * ```php
- * $smsgate = new SmsGateProvider(
+ * $aliftech = new AliftechProvider(
  *     apiKey: 'your-api-key',
  *     defaultSenderName: 'AlifBank',
  * );
  *
- * $result = $smsgate->send(new SmsMessage('+992900900900', 'Hello'));
- * $smsgate->getStatus($result->messageId);
+ * $result = $aliftech->send(new SmsMessage('+992900900900', 'Hello'));
+ * $aliftech->getStatus($result->messageId);
  * ```
  *
  * ## Authentication
  *
- * SMSGate uses the `X-Api-Key` header instead of the more common
+ * Aliftech uses the `X-Api-Key` header instead of the more common
  * `Authorization: Bearer ...`. The adapter sets it on every request.
  *
  * ## Optional metadata keys
  *
  * Use the `METADATA_*` constants (or the matching string keys) on
- * {@see SmsMessage::$metadata} to forward optional SMSGate fields:
+ * {@see SmsMessage::$metadata} to forward optional Aliftech fields:
  *
  * - `priority`         => `SmsPriority` enum or integer 0/1/2.
  * - `sms_type`         => `SmsType` enum or integer 1/2/3 (overrides constructor default).
@@ -64,14 +64,14 @@ use Throwable;
  *
  * @link https://docs.smsgate.tj/api/sms-api.html
  */
-final class SmsGateProvider implements SmsProviderInterface
+final class AliftechProvider implements SmsProviderInterface
 {
-    public const PROVIDER_NAME = 'smsgate';
+    public const PROVIDER_NAME = 'aliftech';
 
-    /** Primary production endpoint, as documented by SMSGate. */
+    /** Primary production endpoint, as documented by Aliftech. */
     public const DEFAULT_BASE_URI = 'https://sms2.aliftech.net';
 
-    /** Backup endpoint documented by SMSGate as a fallback host. */
+    /** Backup endpoint documented by Aliftech as a fallback host. */
     public const FALLBACK_BASE_URI = 'https://smsgate.tj';
 
     public const METADATA_PRIORITY = 'priority';
@@ -90,7 +90,7 @@ final class SmsGateProvider implements SmsProviderInterface
     private readonly StreamFactoryInterface $streamFactory;
 
     /**
-     * @param string                       $apiKey            X-Api-Key value issued by SMSGate.
+     * @param string                       $apiKey            X-Api-Key value issued by Aliftech.
      * @param string|null                  $defaultSenderName Pre-registered sender id used
      *                                                        whenever {@see SmsMessage::$from}
      *                                                        is null.
@@ -102,7 +102,7 @@ final class SmsGateProvider implements SmsProviderInterface
      *                                                        Auto-discovered when null.
      * @param StreamFactoryInterface|null  $streamFactory     Optional PSR-17 stream factory.
      *                                                        Auto-discovered when null.
-     * @param string                       $baseUri           Base URI of the SMSGate API.
+     * @param string                       $baseUri           Base URI of the Aliftech API.
      *                                                        Defaults to the documented primary
      *                                                        endpoint; pass
      *                                                        {@see self::FALLBACK_BASE_URI}
@@ -118,17 +118,17 @@ final class SmsGateProvider implements SmsProviderInterface
         string $baseUri = self::DEFAULT_BASE_URI,
     ) {
         if (trim($this->apiKey) === '') {
-            throw new InvalidArgumentException('SMSGate API key must not be empty.');
+            throw new InvalidArgumentException('Aliftech API key must not be empty.');
         }
 
         if ($this->defaultSenderName !== null && trim($this->defaultSenderName) === '') {
             throw new InvalidArgumentException(
-                'SMSGate default sender name must be null or a non-empty string.',
+                'Aliftech default sender name must be null or a non-empty string.',
             );
         }
 
         if (trim($baseUri) === '') {
-            throw new InvalidArgumentException('SMSGate base URI must not be empty.');
+            throw new InvalidArgumentException('Aliftech base URI must not be empty.');
         }
 
         $this->baseUri = rtrim($baseUri, '/');
@@ -148,7 +148,7 @@ final class SmsGateProvider implements SmsProviderInterface
 
         if ($sender === null) {
             throw new InvalidMessageException(
-                'SMSGate requires a sender address. Pass SmsMessage::$from or configure '
+                'Aliftech requires a sender address. Pass SmsMessage::$from or configure '
                 . 'a default sender name on the provider.',
             );
         }
@@ -168,7 +168,7 @@ final class SmsGateProvider implements SmsProviderInterface
             $body = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
         } catch (JsonException $e) {
             throw new ProviderException(
-                'Could not encode the SMSGate request body: ' . $e->getMessage(),
+                'Could not encode the Aliftech request body: ' . $e->getMessage(),
                 self::PROVIDER_NAME,
                 null,
                 $e,
@@ -194,7 +194,7 @@ final class SmsGateProvider implements SmsProviderInterface
                 : 'MessageError flag set without a reason.';
 
             throw new ProviderException(
-                sprintf('SMSGate rejected the message: %s', $reason),
+                sprintf('Aliftech rejected the message: %s', $reason),
                 self::PROVIDER_NAME,
                 is_string($decoded['MessageResult'] ?? null) ? $decoded['MessageResult'] : null,
             );
@@ -203,7 +203,7 @@ final class SmsGateProvider implements SmsProviderInterface
         $messageId = $decoded['MessageId'] ?? null;
         if (!is_scalar($messageId) || (string) $messageId === '') {
             throw new ProviderException(
-                'SMSGate send response is missing a valid "MessageId" field.',
+                'Aliftech send response is missing a valid "MessageId" field.',
                 self::PROVIDER_NAME,
                 (string) $statusCode,
             );
@@ -220,7 +220,7 @@ final class SmsGateProvider implements SmsProviderInterface
     public function getStatus(string $messageId): StatusResult
     {
         if (trim($messageId) === '') {
-            throw new InvalidMessageException('SMSGate messageId must not be empty.');
+            throw new InvalidMessageException('Aliftech messageId must not be empty.');
         }
 
         $request = $this->buildRequest('GET', self::STATUS_PATH . rawurlencode($messageId));
@@ -237,7 +237,7 @@ final class SmsGateProvider implements SmsProviderInterface
         $commandStatus = $decoded['CommandStatus'] ?? null;
         if (is_string($commandStatus) && strtoupper($commandStatus) !== 'OK') {
             throw new ProviderException(
-                sprintf('SMSGate status request failed: CommandStatus=%s', $commandStatus),
+                sprintf('Aliftech status request failed: CommandStatus=%s', $commandStatus),
                 self::PROVIDER_NAME,
                 $commandStatus,
             );
@@ -246,7 +246,7 @@ final class SmsGateProvider implements SmsProviderInterface
         $messageState = $decoded['MessageState'] ?? null;
         if ($messageState === null || $messageState === '') {
             throw new ProviderException(
-                'SMSGate status response is missing a valid "MessageState" field.',
+                'Aliftech status response is missing a valid "MessageState" field.',
                 self::PROVIDER_NAME,
                 (string) $statusCode,
             );
@@ -275,7 +275,7 @@ final class SmsGateProvider implements SmsProviderInterface
             return $this->httpClient->sendRequest($request);
         } catch (ClientExceptionInterface $e) {
             throw new ProviderException(
-                'SMSGate request failed before a response was received: ' . $e->getMessage(),
+                'Aliftech request failed before a response was received: ' . $e->getMessage(),
                 self::PROVIDER_NAME,
                 null,
                 $e,
@@ -301,7 +301,7 @@ final class SmsGateProvider implements SmsProviderInterface
             $expiresIn = $metadata[self::METADATA_EXPIRES_IN];
             if (!is_int($expiresIn) || $expiresIn < 0) {
                 throw new InvalidMessageException(
-                    'SMSGate metadata["expires_in"] must be a non-negative integer (seconds).',
+                    'Aliftech metadata["expires_in"] must be a non-negative integer (seconds).',
                 );
             }
             $payload['ExpiresIn'] = $expiresIn;
@@ -311,7 +311,7 @@ final class SmsGateProvider implements SmsProviderInterface
             $label = $metadata[self::METADATA_LABEL];
             if (!is_string($label) || $label === '') {
                 throw new InvalidMessageException(
-                    'SMSGate metadata["label"] must be a non-empty string.',
+                    'Aliftech metadata["label"] must be a non-empty string.',
                 );
             }
             $payload['SmsLabel'] = $label;
@@ -321,7 +321,7 @@ final class SmsGateProvider implements SmsProviderInterface
             $clientMessageId = $metadata[self::METADATA_CLIENT_MESSAGE_ID];
             if (!is_string($clientMessageId) || $clientMessageId === '') {
                 throw new InvalidMessageException(
-                    'SMSGate metadata["client_message_id"] must be a non-empty string.',
+                    'Aliftech metadata["client_message_id"] must be a non-empty string.',
                 );
             }
             $payload['ClientMessageId'] = $clientMessageId;
@@ -351,7 +351,7 @@ final class SmsGateProvider implements SmsProviderInterface
         }
 
         throw new InvalidMessageException(sprintf(
-            'SMSGate metadata["sms_type"] must be a %s enum or one of the integers 1, 2, 3.',
+            'Aliftech metadata["sms_type"] must be a %s enum or one of the integers 1, 2, 3.',
             SmsType::class,
         ));
     }
@@ -370,7 +370,7 @@ final class SmsGateProvider implements SmsProviderInterface
         }
 
         throw new InvalidMessageException(sprintf(
-            'SMSGate metadata["priority"] must be a %s enum or one of the integers 0, 1, 2.',
+            'Aliftech metadata["priority"] must be a %s enum or one of the integers 0, 1, 2.',
             SmsPriority::class,
         ));
     }
@@ -388,7 +388,7 @@ final class SmsGateProvider implements SmsProviderInterface
         }
 
         throw new InvalidMessageException(
-            'SMSGate metadata["scheduled_at"] must be a DateTimeInterface or non-empty string.',
+            'Aliftech metadata["scheduled_at"] must be a DateTimeInterface or non-empty string.',
         );
     }
 
@@ -428,14 +428,14 @@ final class SmsGateProvider implements SmsProviderInterface
         }
 
         return new ProviderException(
-            sprintf('SMSGate %s request failed (HTTP %d): %s', $operation, $statusCode, $reason),
+            sprintf('Aliftech %s request failed (HTTP %d): %s', $operation, $statusCode, $reason),
             self::PROVIDER_NAME,
             (string) $statusCode,
         );
     }
 
     /**
-     * Map SMSGate's `MessageState` (string or numeric code) into the normalized enum.
+     * Map Aliftech's `MessageState` (string or numeric code) into the normalized enum.
      *
      * The documented values are listed at:
      * @link https://docs.smsgate.tj/api/sms-api.html

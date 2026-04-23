@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SmsGateway\Tests\Unit\Providers\SmsGate;
+namespace SmsGateway\Tests\Unit\Providers\Aliftech;
 
 use DateTimeImmutable;
 use DateTimeZone;
@@ -19,16 +19,16 @@ use SmsGateway\DTO\SmsMessage;
 use SmsGateway\Enum\MessageStatus;
 use SmsGateway\Exception\InvalidMessageException;
 use SmsGateway\Exception\ProviderException;
-use SmsGateway\Providers\SmsGate\SmsGateProvider;
-use SmsGateway\Providers\SmsGate\SmsPriority;
-use SmsGateway\Providers\SmsGate\SmsType;
+use SmsGateway\Providers\Aliftech\AliftechProvider;
+use SmsGateway\Providers\Aliftech\SmsPriority;
+use SmsGateway\Providers\Aliftech\SmsType;
 use SmsGateway\Tests\Fixtures\MockHttpClient;
 use SmsGateway\Tests\Fixtures\TransportException;
 
-#[CoversClass(SmsGateProvider::class)]
+#[CoversClass(AliftechProvider::class)]
 #[CoversClass(SmsType::class)]
 #[CoversClass(SmsPriority::class)]
-final class SmsGateProviderTest extends TestCase
+final class AliftechProviderTest extends TestCase
 {
     private const SAMPLE_SEND_SUCCESS = <<<'JSON'
     {
@@ -59,18 +59,18 @@ final class SmsGateProviderTest extends TestCase
 
     public function test_get_name_is_stable(): void
     {
-        self::assertSame('smsgate', $this->makeProvider()->getName());
-        self::assertSame(SmsGateProvider::PROVIDER_NAME, $this->makeProvider()->getName());
+        self::assertSame('aliftech', $this->makeProvider()->getName());
+        self::assertSame(AliftechProvider::PROVIDER_NAME, $this->makeProvider()->getName());
     }
 
     public function test_can_be_constructed_with_only_business_config(): void
     {
-        $provider = new SmsGateProvider(
+        $provider = new AliftechProvider(
             apiKey: 'test-key',
             defaultSenderName: 'AlifBank',
         );
 
-        self::assertSame(SmsGateProvider::PROVIDER_NAME, $provider->getName());
+        self::assertSame(AliftechProvider::PROVIDER_NAME, $provider->getName());
     }
 
     /**
@@ -96,13 +96,13 @@ final class SmsGateProviderTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/' . preg_quote($expectedMessageFragment, '/') . '/i');
 
-        new SmsGateProvider(
+        new AliftechProvider(
             apiKey: $apiKey,
             defaultSenderName: $defaultSenderName,
             httpClient: $http,
             requestFactory: $factory,
             streamFactory: $factory,
-            baseUri: $baseUri ?? SmsGateProvider::DEFAULT_BASE_URI,
+            baseUri: $baseUri ?? AliftechProvider::DEFAULT_BASE_URI,
         );
     }
 
@@ -445,7 +445,7 @@ final class SmsGateProviderTest extends TestCase
 
         self::assertSame('23861959', $result->messageId);
         self::assertSame(MessageStatus::Queued, $result->status);
-        self::assertSame('smsgate', $result->providerName);
+        self::assertSame('aliftech', $result->providerName);
         self::assertSame('OK', $result->raw['MessageResult']);
     }
 
@@ -460,7 +460,7 @@ final class SmsGateProviderTest extends TestCase
             $provider->send(new SmsMessage('+992900900900', 'hi'));
             self::fail('Expected ProviderException.');
         } catch (ProviderException $exception) {
-            self::assertSame('smsgate', $exception->getProviderName());
+            self::assertSame('aliftech', $exception->getProviderName());
             self::assertSame('InvalidSenderAddress', $exception->getProviderCode());
             self::assertStringContainsString('InvalidSenderAddress', $exception->getMessage());
         }
@@ -490,7 +490,7 @@ final class SmsGateProviderTest extends TestCase
             $provider->send(new SmsMessage('+992900900900', 'hi'));
             self::fail('Expected ProviderException.');
         } catch (ProviderException $exception) {
-            self::assertSame('smsgate', $exception->getProviderName());
+            self::assertSame('aliftech', $exception->getProviderName());
             self::assertNull($exception->getProviderCode());
             self::assertInstanceOf(TransportException::class, $exception->getPrevious());
         }
@@ -519,7 +519,7 @@ final class SmsGateProviderTest extends TestCase
             $provider->send(new SmsMessage('+992900900900', 'hi'));
             self::fail('Expected ProviderException.');
         } catch (ProviderException $exception) {
-            self::assertSame('smsgate', $exception->getProviderName());
+            self::assertSame('aliftech', $exception->getProviderName());
             self::assertSame((string) $statusCode, $exception->getProviderCode());
         }
     }
@@ -733,11 +733,11 @@ final class SmsGateProviderTest extends TestCase
         string $apiKey = 'test-key',
         ?string $defaultSenderName = null,
         SmsType $defaultSmsType = SmsType::Common,
-        string $baseUri = SmsGateProvider::DEFAULT_BASE_URI,
-    ): SmsGateProvider {
+        string $baseUri = AliftechProvider::DEFAULT_BASE_URI,
+    ): AliftechProvider {
         $factory = new Psr17Factory();
 
-        return new SmsGateProvider(
+        return new AliftechProvider(
             apiKey: $apiKey,
             defaultSenderName: $defaultSenderName,
             defaultSmsType: $defaultSmsType,

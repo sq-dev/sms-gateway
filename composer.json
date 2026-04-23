@@ -3,7 +3,7 @@
     "description": "Provider-agnostic SMS gateway abstractions with a unified API for multiple SMS providers.",
     "type": "library",
     "license": "MIT",
-    "keywords": ["sms", "gateway", "sms-gateway", "provider", "abstraction"],
+    "keywords": ["sms", "gateway", "sms-gateway", "provider", "abstraction", "laravel"],
     "autoload": {
         "psr-4": {
             "SmsGateway\\": "src/"
@@ -31,13 +31,25 @@
     },
     "require-dev": {
         "nyholm/psr7": "^1.8",
+        "orchestra/testbench": "^8.0 || ^9.0 || ^10.0",
         "phpunit/phpunit": "^10.5",
         "symfony/http-client": "^6.4 || ^7.0"
     },
     "suggest": {
         "guzzlehttp/guzzle": "Popular PSR-18 HTTP client; installed once, auto-detected by discovery",
-        "symfony/http-client": "Lightweight PSR-18 HTTP client with auto-detection support",
-        "php-http/curl-client": "Minimal PSR-18 client based on cURL when you don't want a full-featured client"
+        "illuminate/support": "Required for the optional Laravel integration (service provider, facade, manager). Laravel 10, 11, and 12 are supported.",
+        "php-http/curl-client": "Minimal PSR-18 client based on cURL when you don't want a full-featured client",
+        "symfony/http-client": "Lightweight PSR-18 HTTP client with auto-detection support"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "SmsGateway\\Laravel\\SmsGatewayServiceProvider"
+            ],
+            "aliases": {
+                "SmsGateway": "SmsGateway\\Laravel\\Facades\\SmsGateway"
+            }
+        }
     },
     "scripts": {
         "test": "phpunit"

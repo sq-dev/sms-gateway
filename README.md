@@ -5,11 +5,16 @@ a unified delivery-status model across multiple SMS providers.
 
 This package ships:
 
-- A thin **`Sender` facade** so call sites read like `$sender->send('+992…', 'Hi')`.
+- A thin **`Sender` entry-point** so plain-PHP call sites read like
+  `$sender->send('+992…', 'Hi')`.
+- **First-class [Laravel integration](#laravel-integration)** via a
+  `SmsGateway` facade, auto-discovered service provider, publishable config,
+  and a connection manager that supports a default connection plus any
+  number of named ones.
 - **Shared contracts and a normalized domain model** (DTOs, status enum,
   exceptions) so swapping providers never requires rewriting call sites.
 - **Built-in provider adapters** — currently [Payom.tj](#payomtj-provider),
-  [OsonSMS](#osonsms-provider), and [SMSGate](#smsgate-provider) — that come
+  [OsonSMS](#osonsms-provider), and [Aliftech](#aliftech-provider) — that come
   fully wired, with no manual HTTP-client setup required.
 
 ## Installation
@@ -91,6 +96,209 @@ $sender->provider(); // SendsSmsInterface
 Because `Sender` wraps a `SendsSmsInterface`, you can point it at any built-in
 provider or a custom one you wrote yourself (see
 [Authoring a custom provider](#authoring-a-custom-provider)).
+
+> **Laravel users:** in a Laravel app you usually do not instantiate `Sender`
+> manually — the [Laravel integration](#laravel-integration) wires everything
+> up from `config/sms-gateway.php` and exposes a `SmsGateway` facade on top
+> of `Sender`. The plain-PHP usage shown above still works, but the facade is
+> the idiomatic call site.
+
+## Laravel integration
+
+The package ships a full Laravel bridge — service provider, config file, and
+a facade — so you can send SMS with a single static call in any Laravel 10,
+11, or 12 application.
+
+### Install
+
+```bash
+composer require sqdev/sms-gateway
+```
+
+Laravel auto-discovers the service provider and the `SmsGateway` alias via
+[package discovery](https://laravel.com/docs/packages#package-discovery), so
+no manual registration is required. Publish the default config to customize
+credentials and the default connection:
+
+```bash
+php artisan vendor:publish --tag=sms-gateway-config
+```
+
+This copies the package config to `config/sms-gateway.php` in your app.
+
+### Configuration
+
+The config file is Laravel-idiomatic: a `default` key plus a `connections`
+map that mirrors the drivers' constructor arguments. Credentials live in
+environment variables so nothing sensitive lands in git:
+
+```php
+// config/sms-gateway.php
+
+return [
+    'default' => env('SMS_GATEWAY_CONNECTION', 'aliftech'),
+
+    'connections' => [
+        'payom' => [
+            'driver' => 'payom',
+            'token' => env('PAYOM_JWT_TOKEN'),
+            'default_sender_name' => env('PAYOM_DEFAULT_SENDER'),
+            'base_uri' => env('PAYOM_BASE_URI'),
+        ],
+
+        'osonsms' => [
+            'driver' => 'osonsms',
+            'token' => env('OSONSMS_TOKEN'),
+            'login' => env('OSONSMS_LOGIN'),
+            'default_sender_name' => env('OSONSMS_DEFAULT_SENDER'),
+            'base_uri' => env('OSONSMS_BASE_URI'),
+        ],
+
+        'aliftech' => [
+            'driver' => 'aliftech',
+            'api_key' => env('ALIFTECH_API_KEY'),
+            'default_sender_name' => env('ALIFTECH_DEFAULT_SENDER'),
+            // "common" (default) | "otp" | "batch", or the integer 1/2/3.
+            'default_sms_type' => env('ALIFTECH_DEFAULT_SMS_TYPE'),
+            'base_uri' => env('ALIFTECH_BASE_URI'),
+        ],
+    ],
+];
+```
+
+Sample `.env` entries for each supported driver:
+
+```dotenv
+SMS_GATEWAY_CONNECTION=aliftech
+
+# Payom
+PAYOM_JWT_TOKEN=...
+PAYOM_DEFAULT_SENDER=your-payom-sender
+
+# OsonSMS
+OSONSMS_TOKEN=...
+OSONSMS_LOGIN=...
+OSONSMS_DEFAULT_SENDER=YOURBRAND
+
+# Aliftech
+ALIFTECH_API_KEY=...
+ALIFTECH_DEFAULT_SENDER=AlifBank
+ALIFTECH_DEFAULT_SMS_TYPE=otp
+```
+
+You can define as many named connections as you want — multiple environments,
+tenant-specific credentials, or several drivers side by side.
+
+### Sending SMS with the facade
+
+The `SmsGateway` facade is the convenient call site. Laravel registers the
+`SmsGateway` alias automatically, so either of these imports works:
+
+```php
+use SmsGateway\Laravel\Facades\SmsGateway; // explicit import (recommended)
+// or simply `use SmsGateway;` — thanks to the auto-registered alias
+```
+
+```php
+// Default connection (whatever `config('sms-gateway.default')` resolves to).
+SmsGateway::send('+992937123456', 'Your code is 1234.');
+
+// Target a specific named connection.
+SmsGateway::provider('payom')->send('+992937123456', 'Hi');
+
+// Optional per-message sender id + metadata, just like on `Sender`.
+SmsGateway::send(
+    to: '+992937123456',
+    text: 'Hi',
+    from: 'ACME',
+    metadata: ['client_ref' => 'r-1'],
+);
+
+// `connection()` is an alias for `provider()` if you prefer Laravel vocabulary.
+SmsGateway::connection('osonsms')->sendMessage($smsMessage);
+```
+
+All three signatures return the same normalized `SendResult` as plain-PHP
+usage — nothing in the contract changes.
+
+### Constructor injection
+
+The package also binds the default `Sender` to the container, so services
+that just need "send an SMS" can type-hint `Sender` directly and stay
+framework-agnostic below the controller layer:
+
+```php
+use SmsGateway\Sender;
+
+final class SendOtpCommand
+{
+    public function __construct(private readonly Sender $sms) {}
+
+    public function handle(string $phone, string $code): void
+    {
+        $this->sms->send($phone, "Your code is $code.");
+    }
+}
+```
+
+Switching `config('sms-gateway.default')` or calling
+`SmsGateway::setDefaultConnection('...')` at runtime is reflected on the
+next container resolution, so per-tenant defaults and feature-flagged
+provider rollouts are straightforward.
+
+### Registering custom drivers
+
+The facade exposes `extend()` so apps can plug in drivers that are not
+built into the package (queued sends, in-memory fakes for tests, a private
+aggregator, …):
+
+```php
+use Illuminate\Support\ServiceProvider;
+use SmsGateway\Contracts\SendsSmsInterface;
+use SmsGateway\Laravel\Facades\SmsGateway;
+use SmsGateway\Providers\Payom\PayomSmsProvider;
+
+final class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        SmsGateway::extend('queued', function ($app, array $config, string $name): SendsSmsInterface {
+            return new QueuedSmsProvider(
+                inner: new PayomSmsProvider(
+                    token: $config['token'],
+                    defaultSenderName: $config['default_sender_name'],
+                ),
+                queue: $app->make('queue'),
+            );
+        });
+    }
+}
+```
+
+Once registered, `'driver' => 'queued'` inside any connection will resolve
+through your callback. The manager wraps whatever `SendsSmsInterface` you
+return in a `Sender` and caches the result.
+
+### Testing with the facade
+
+Because the facade is just a proxy to the manager binding, Laravel's stock
+testing tools apply directly. Register a test-only driver that returns an
+in-memory provider to avoid any real HTTP in tests:
+
+```php
+use SmsGateway\Laravel\Facades\SmsGateway;
+use SmsGateway\Tests\Fixtures\DummyProvider;
+
+config([
+    'sms-gateway.default' => 'fake',
+    'sms-gateway.connections.fake' => ['driver' => 'dummy'],
+]);
+SmsGateway::extend('dummy', fn () => new DummyProvider());
+
+// ... your code under test ...
+
+SmsGateway::send('+992900000000', 'hi'); // captured by DummyProvider
+```
 
 ## Built-in providers
 
@@ -348,40 +556,40 @@ if ($status->status->isFinal()) {
 - Bulk-send and balance-check endpoints from the OsonSMS protocol are
   out of scope for the shared contracts and are not exposed by this adapter.
 
-### SMSGate provider
+### Aliftech provider
 
-Adapter for the SMSGate HTTP API (Alif Tech). Implements the full
+Adapter for the Aliftech SMS API. Implements the full
 `SmsProviderInterface` (send **and** status tracking) using the documented
 `POST /api/v1/sms` and `GET /api/v1/sms/{id}` endpoints.
 
 #### Construction
 
 ```php
-use SmsGateway\Providers\SmsGate\SmsGateProvider;
-use SmsGateway\Providers\SmsGate\SmsType;
+use SmsGateway\Providers\Aliftech\AliftechProvider;
+use SmsGateway\Providers\Aliftech\SmsType;
 use SmsGateway\Sender;
 
-$smsgate = new SmsGateProvider(
-    apiKey: $_ENV['SMSGATE_API_KEY'],
+$aliftech = new AliftechProvider(
+    apiKey: $_ENV['ALIFTECH_API_KEY'],
     defaultSenderName: 'AlifBank',
     defaultSmsType: SmsType::Otp, // optional, defaults to Common
 );
 
-$sender = new Sender($smsgate);
+$sender = new Sender($aliftech);
 $result = $sender->send('+992900900900', 'Ваш код подтверждения: 12345');
 ```
 
-SMSGate authenticates with `X-Api-Key`, not a Bearer token. The adapter sets
+Aliftech authenticates with `X-Api-Key`, not a Bearer token. The adapter sets
 that header automatically. By default it uses the documented primary endpoint
 `https://sms2.aliftech.net`; switch to
-`SmsGateProvider::FALLBACK_BASE_URI` if you want the documented reserve host.
+`AliftechProvider::FALLBACK_BASE_URI` if you want the documented reserve host.
 
 #### Field mapping
 
-SMSGate expects a JSON body. The adapter maps the shared DTO plus optional
+Aliftech expects a JSON body. The adapter maps the shared DTO plus optional
 metadata into the documented request payload:
 
-| Source                                          | SMSGate body field |
+| Source                                          | Aliftech body field |
 | ----------------------------------------------- | ------------------ |
 | `SmsMessage::$to` (normalized to digits only)   | `PhoneNumber`      |
 | `SmsMessage::$text`                             | `Text`             |
@@ -399,20 +607,20 @@ matches the format expected by the API.
 
 #### Provider-specific enums
 
-SMSGate has documented integer enums for both message type and priority, so the
+Aliftech has documented integer enums for both message type and priority, so the
 adapter ships type-safe PHP enums as sugar:
 
 | PHP enum                                     | API field   | Values |
 | -------------------------------------------- | ----------- | ------ |
-| `SmsGateway\Providers\SmsGate\SmsType`       | `SmsType`   | `Common=1`, `Otp=2`, `Batch=3` |
-| `SmsGateway\Providers\SmsGate\SmsPriority`   | `Priority`  | `Low=0`, `Normal=1`, `High=2` |
+| `SmsGateway\Providers\Aliftech\SmsType`      | `SmsType`   | `Common=1`, `Otp=2`, `Batch=3` |
+| `SmsGateway\Providers\Aliftech\SmsPriority`  | `Priority`  | `Low=0`, `Normal=1`, `High=2` |
 
 You can pass either the enum instance or the raw documented integer in
 metadata. Example:
 
 ```php
-use SmsGateway\Providers\SmsGate\SmsPriority;
-use SmsGateway\Providers\SmsGate\SmsType;
+use SmsGateway\Providers\Aliftech\SmsPriority;
+use SmsGateway\Providers\Aliftech\SmsType;
 
 $sender->send(
     to: '+992900900900',
@@ -445,10 +653,10 @@ $sender->send(
 
 #### Delivery-status mapping
 
-SMSGate returns `MessageState` either as a string or as its numeric code. Both
+Aliftech returns `MessageState` either as a string or as its numeric code. Both
 forms are accepted and normalized into `MessageStatus`:
 
-| SMSGate `MessageState` | Code | `MessageStatus` |
+| Aliftech `MessageState` | Code | `MessageStatus` |
 | ---------------------- | ---- | --------------- |
 | `None`                 | `0`  | `Unknown`       |
 | `Enroute`              | `1`  | `Sent`          |
@@ -462,7 +670,7 @@ forms are accepted and normalized into `MessageStatus`:
 
 #### Errors
 
-SMSGate uses normal HTTP errors plus structured success/status payloads. The
+Aliftech uses normal HTTP errors plus structured success/status payloads. The
 adapter translates all failures into `ProviderException`:
 
 | Situation                             | Exception                  | `getProviderCode()` |
@@ -481,17 +689,17 @@ try {
     $sender->send('+992900900900', 'Hello');
 } catch (ProviderException $e) {
     match ($e->getProviderCode()) {
-        '401' => $logger->alert('SMSGate API key rejected'),
+        '401' => $logger->alert('Aliftech API key rejected'),
         'InvalidSenderAddress' => $logger->warning('Sender is not registered'),
         'NOT_FOUND' => $logger->notice('Message status not found'),
-        default => $logger->error('SMSGate failure', ['exception' => $e]),
+        default => $logger->error('Aliftech failure', ['exception' => $e]),
     };
 }
 ```
 
 #### Status tracking
 
-SMSGate uses a simple one-part `MessageId`, so unlike OsonSMS there is no
+Aliftech uses a simple one-part `MessageId`, so unlike OsonSMS there is no
 special encoding: the `MessageId` returned by `send()` is passed unchanged into
 `getStatus()`.
 
@@ -511,7 +719,7 @@ $status = $provider->getStatus($result->messageId);
 - `SenderAddress` is required and must already be registered for your account.
 - The API docs mention both a primary host (`https://sms2.aliftech.net/`) and a
   reserve host (`https://smsgate.tj/`); the adapter exposes both as constants.
-- Bulk sending (`POST /api/v1/sms/bulk`) is documented by SMSGate but is out of
+- Bulk sending (`POST /api/v1/sms/bulk`) is documented by Aliftech but is out of
   scope for the current shared contracts, so this adapter currently exposes only
   single-send + status.
 
@@ -755,7 +963,7 @@ $sender->send('+992900000000', 'Hello from Acme');
 
 ```
 src/
-├── Sender.php                       # high-level facade: new Sender($provider)->send(...)
+├── Sender.php                       # high-level entry-point: new Sender($provider)->send(...)
 ├── Contracts/
 │   ├── SendsSmsInterface.php        # send(SmsMessage): SendResult
 │   ├── TracksSmsStatusInterface.php # getStatus(string): StatusResult
@@ -772,15 +980,23 @@ src/
 │   ├── ProviderException.php        # provider runtime/API failures
 │   ├── MessageNotFoundException.php # status lookup for unknown message id
 │   └── UnsupportedFeatureException.php
+├── Laravel/                         # optional Laravel bridge (loaded on demand)
+│   ├── SmsGatewayServiceProvider.php  # auto-discovered service provider
+│   ├── SmsGatewayManager.php          # resolves `default` + named connections
+│   └── Facades/
+│       └── SmsGateway.php             # static proxy to SmsGatewayManager
 └── Providers/
     ├── Payom/
     │   └── PayomSmsProvider.php     # send-only adapter for gateway.payom.tj
     ├── OsonSms/
     │   └── OsonSmsProvider.php      # send + status adapter for api.osonsms.com
-    └── SmsGate/
-        ├── SmsGateProvider.php      # send + status adapter for sms2.aliftech.net / smsgate.tj
+    └── Aliftech/
+        ├── AliftechProvider.php     # send + status adapter for sms2.aliftech.net / smsgate.tj
         ├── SmsPriority.php          # typed wrapper for Priority values 0/1/2
         └── SmsType.php              # typed wrapper for SmsType values 1/2/3
+
+config/
+└── sms-gateway.php                  # published to `config/sms-gateway.php` in Laravel apps
 ```
 
 ## Development
@@ -790,19 +1006,26 @@ composer install
 composer test
 ```
 
-The test suite uses PHPUnit 10. The in-memory
-`tests/Fixtures/DummyProvider.php` doubles as the canonical reference
-implementation for custom providers.
+The test suite uses PHPUnit 10 and is split into two PHPUnit test suites:
+
+- `Unit` — framework-agnostic tests for DTOs, contracts, and providers.
+- `Laravel` — integration tests for the service provider, facade, and
+  manager, bootstrapped through `orchestra/testbench`.
+
+Run a single suite with `vendor/bin/phpunit --testsuite=Unit` or
+`--testsuite=Laravel`. The in-memory `tests/Fixtures/DummyProvider.php`
+doubles as the canonical reference implementation for custom providers.
 
 ## Roadmap
 
-- **Done:** abstraction layer, `Sender` facade, Payom.tj send-only adapter,
-  OsonSMS send + status adapter, SMSGate send + status adapter, zero-config
-  construction via `php-http/discovery`.
+- **Done:** abstraction layer, `Sender` entry-point, Payom.tj send-only
+  adapter, OsonSMS send + status adapter, Aliftech send + status adapter,
+  zero-config construction via `php-http/discovery`, Laravel integration
+  (service provider, `SmsGateway` facade, config-driven connection manager).
 - More built-in provider adapters (added one at a time).
 - Payom status tracking once the upstream API documents an endpoint for it.
-- Optional orchestration helpers (manager, fallback chain, retry) that
-  operate on `SmsProviderInterface` without changing it.
+- Additional orchestration helpers (fallback chain, retry, queued senders)
+  that operate on `SmsProviderInterface` without changing it.
 - Additional capability contracts (bulk send, templates, inbound SMS,
   webhooks) introduced via new interfaces so existing providers keep working.
 

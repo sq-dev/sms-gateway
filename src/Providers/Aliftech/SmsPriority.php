@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace SmsGateway\Providers\SmsGate;
+namespace SmsGateway\Providers\Aliftech;
 
 /**
- * SMSGate `Priority` codes documented in the HTTP API.
+ * Aliftech `Priority` codes documented in the HTTP API.
  *
  * Higher priority messages are processed first. {@see self::High} is
  * recommended for OTP traffic to minimize end-to-end latency.
